@@ -1,0 +1,52 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Sauron XS Backend",
+    "description": "",
+    "version": "2.2"
+  },
+  "servers": [
+      {"url": "https://sauronx-sandbox.shargo.io", "description": "Test server"}
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization"
+      }
+    }
+  },
+  "security": [{
+    "ApiKeyAuth": []
+  }],
+  "produces": ["application/json"],
+  "paths": {
+    "/v2/slots/timeline/{city}/{date}": {
+      "get": {
+        "tags": ["Timeline Slots"],
+        "description": "Get the slots of a given day with information regarding price and driver",
+        "parameters": [
+          {"name": "city", "in": "path", "schema": {"type": "integer"}, "required": "true"},
+          {"name": "date", "in": "path", "schema": {"type": "string"}, "required": "true"}
+        ],
+        "responses": {}
+      }
+    },
+    "/v2/filters/{id}": {
+      "get": {
+        "tags": ["Filters"],
+        "description": "Get the filters for a given screen in SauronXS",
+        "parameters": [
+          {"name": "id", "in": "path", "schema": {"type": "string"}, "required": "true"}
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": "application/json"
+          }
+        }
+      }
+    }
+  }
+}

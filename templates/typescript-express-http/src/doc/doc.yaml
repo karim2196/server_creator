@@ -1,0 +1,833 @@
+openapi: 3.0.0
+info:
+  title: Sauron XS Backend
+  description: 'API Gateway for the SauronXS Backoffice (Shargo Control Panel)'
+  version: '2.2'
+servers:
+- url: https://sauronx-sandbox.shargo.io
+  description: Test server
+produces:
+- application/json
+paths:
+  "/client-version/{clientName}":
+    get:
+      tags:
+        - Version
+      security:
+        - GeneralSauronAuth: []
+      description:
+        Get the version of the given client (f.e. SauronXS client)
+      parameters:
+        - name: clientName
+          in: path
+          schema:
+            type: string
+          required: 'true'
+      responses:
+        '200':
+          description: Client exists in database. Returns data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                    description: Version of the last stable client
+                  buildNumber:
+                    type: number
+                    description: Compilation number of the last stable client
+        '400 - CV000':
+          description: Bad Request. Client not found with this id
+        '5XX':
+          description: Unexpected Error
+  "/v2/push-token":
+    post:
+      tags:
+        - Push Token
+      description:
+        Register the push token for the device
+      parameters:
+        - name: apnToken
+          in: body
+          schema:
+            type: string
+          required: 'true'
+        - name: device
+          in: bpdy
+          schema:
+            type: string
+          required: 'true'
+      responses:
+        '200':
+          description: Device and token correctly registered
+        '400 - PT001':
+          description: Missing parameter apnToken in request
+        '400 - PT002':
+          description: Missing parameter device in request
+        '400 - PT003':
+          description: Device not registered
+        '400 - PT004':
+          description: Error saving new device
+  "/v2/device-access-request":
+    post:
+      tags:
+        - Devices
+      description:
+        Save the request for access of a new device
+      parameters:
+          - name: email
+            in: body
+            schema:
+              type: string
+              required: 'true'
+          - name: password
+            in: body
+            schema:
+              type: string
+              required: 'true'
+
+      responses:
+        '200':
+          description: Requst correctly created
+  "/v2/device-access/{deviceId}":
+    get:
+      tags:
+        - Devices
+      description:
+        Get the status of the device access for the given device Id
+      parameters:
+        - name: deviceId
+          in: path
+          schema:
+            type: string
+            required: 'true'
+      responses:
+        '200':
+          description: Status of the device request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device:
+                    type: string
+                    description: Device ID of the requested device
+                  validated:
+                    type: boolean
+                    description: Flag indicating if the device was validated or not
+  "/v2/login":
+    post:
+      tags:
+        - Login as a Operations Manager
+      security:
+        - GeneralSauronAuth: []
+      description:
+        Get the token to identify the account for future server requests
+      parameters:
+        - name: email
+          in: body
+          schema:
+            type: string
+          required: 'true'
+        - name: password
+          in: body
+          schema:
+            type: string
+          required: 'true'
+        - name: device
+          in: body
+          schema:
+            type: string
+          required: 'true'
+        - name: apnToken
+          in: body
+          schema:
+            type: string
+          required: 'true'
+      responses:
+        '200':
+          description: User correctly logged in. Session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Token to use in future calls as a Authentication header
+        '401 - AUTH01':
+          description: Bad Request. Invalid Password
+        '401 - AUTH02':
+          description: Bad Request. Email does not exist on database
+        '401 - AUTH03':
+          description: Error removing the session when logging off
+        '401 - AUTH04':
+          description: Error saving the session
+        '5XX':
+          description: Unexpected Error
+  "/v2/deliveries/{deliveryId}":
+    patch:
+      tags:
+        - Deliveries
+        - Dashboard
+      description:
+        Modifies an existing delivery
+      parameters:
+        - name: deliveryId
+          in: path
+          schema:
+            type: string
+          required: 'true'
+
+        - name: operations
+          in: body
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                op:
+                  type: string
+                  description: Operation. Should be add, replace, or remove
+                path:
+                  type: string
+                  description: key of the object to apply the operation to. For example, status or destinations/0/status
+                value:
+                  type: string
+                  description: Value to put into the path, or value to add
+          required: 'true'
+  "/v2/drivers/newOffer":
+    post:
+      tags:
+        - Drivers
+        - Dashboard
+      description:
+        Offer a delivery to a driver
+      parameters:
+        - name: deliveryId
+          in: body
+          schema:
+            type: string
+          required: 'true'
+        - name: driverId
+          in: body
+          schema:
+            type: string
+          required: 'true'
+      responses:
+        '200':
+          description: Delivery offered correctly
+
+  "/v2/drivers/currentStats":
+    get:
+      tags:
+        - Drivers
+        - Dashboard
+      description:
+        Get the summarized status of the drivers
+      responses:
+        '200':
+          description: List of drivers status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        driverId:
+                          type: string
+                          description: Identifier of driver
+                        driverName:
+                          type: string
+                          description: Name of driver
+                        transport:
+                          type: number
+                          description: Transport of the driver
+                        city:
+                          type: string
+                          description: City of the driver
+                        currentPickup:
+                          type: number
+                          description: How many items is picking up
+                        currentDropoff:
+                          type: number
+                          description: How many items is dropping off
+                        doneInSlot:
+                          type: number
+                          description: How many items has he done in slot
+                        priceRatio:
+                          type: number
+                          description: Ratio of money done in slot
+                        timeRatio:
+                          type: number
+                          description: Ratio of time remaining in the slot
+
+  "/v2/deliveries":
+    get:
+      tags:
+        - Dashboard
+        - Deliveries
+      description:
+        Get the deliveries
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of deliveries matching the query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deliveries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Delivery'
+  "/v2/sessions/{token}":
+    delete:
+      tags:
+        - Logoff and remove the session
+      description:
+        Remove the session identified by the token given in the route
+      parameters:
+        - name: token
+          in: path
+          schema:
+            type: string
+          required: 'true'
+      responses:
+        '200':
+          description: User correctly logged out. Session removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Message informing about the state of the transaction
+        '400':
+          description: Bad Request.
+        '5XX':
+          description: Unexpected Error
+  "/v2/slots/timeline/{city}/{date}":
+    get:
+      tags:
+      - Timeline Slots
+      description: Get the slots of a given day with information regarding price and
+        driver
+      parameters:
+      - name: city
+        in: path
+        schema:
+          type: integer
+        required: 'true'
+      - name: date
+        in: path
+        schema:
+          type: string
+          format: date-time
+        required: 'true'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SauronRowTimeline'
+                  day:
+                    type: integer
+                    description: Day of the request
+                    example: 10
+                  month:
+                    type: integer
+                    description: Month of the request
+                    example: 2
+                  year:
+                    type: integer
+                    description: Year of the request
+                    example: 2019
+                  city:
+                    type: string
+                    description: City of the returned slots
+                    example: Barcelona
+                  transports:
+                    type: array
+                    description: Information about the different types of transports
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Name of the transport
+                          example: "bike"
+                        id:
+                          type: integer
+                          description: Integer identifier of the transport
+                          example: 0
+        '400 - FMT001':
+          description: Bad Request. Invalid Date
+        '5XX':
+          description: Unexpected Error
+  "/v2/filters/{id}":
+    get:
+      tags:
+      - Filters
+      description: Get the filters for a given screen in SauronXS. The filters can be of different types
+        - 0 -> CHECKBOX
+        - 1 -> RADIOBUTTON
+        - 2 -> Date Selector
+        - 3 -> Hour Selector
+        - 4 -> Dropdown
+      parameters:
+      - name: id
+        in: path
+        schema:
+          type: string
+        required: 'true'
+        description: "Identifier of the group of filters to get"
+        example: "slots"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilterGroup'
+        '400 - FE001':
+          description: Bad Request. Filters with this ID not found
+        '5XX':
+          description: Unexpected Error.
+  "/driveracquisition/meetings":
+    post:
+      tags:
+        - DriverAcquisition
+      description:
+        Creates a new meeting for drivers
+      parameters:
+        - name: transport
+          in: body
+          schema:
+            type: integer
+          required: 'true'
+        - name: date
+          in: body
+          schema:
+            type: string
+          required: 'true'
+        - name: capacity
+          in: body
+          schema:
+            type: integer
+          required: 'true'
+        - name: city
+          in: body
+          schema:
+            type: string
+          required: 'true'
+      responses:
+        '201':
+          description: Meeting created correctly
+    get:
+      tags:
+        - DriverAcquisition
+      description:
+        Get the list of meetings
+      responses:
+        '200':
+          description: The list of meetings
+components:
+  schemas:
+      Sender:
+        type: object
+        properties:
+          email:
+            type: string
+          firstName:
+            type: string
+          lastName:
+            type: string
+      Driver:
+        type: object
+        properties:
+          email:
+            type: string
+          firstName:
+            type: string
+          lastName:
+            type: string
+      User:
+        type: object
+        properties:
+          email:
+            type: string
+          roles:
+            type: array
+            items:
+              type:
+                string
+          permissions:
+            type: array
+            items:
+              type:
+                string
+
+      Price:
+        type: object
+        properties:
+          senderPrice:
+            type: number
+          driverPrice:
+            type: number
+          totalPrice:
+            type: number
+
+      Location:
+        type: object
+        properties:
+          latitude:
+            type: number
+          longitude:
+            type: number
+          address:
+            type: string
+          comments:
+            type: string
+
+      ColorStatus:
+        type: object
+        properties:
+          alright:
+            type: number
+          caution:
+            type: number
+          danger:
+            type: number
+
+      Destination:
+        type: object
+        properties:
+          receptorName:
+            type: string
+          receptorPhone:
+            type: string
+          clientId:
+            type: string
+          numPackages:
+            type: number
+          status:
+            type: number
+          dropoffLocation:
+            $ref: '#/components/schemas/Location'
+
+      Delivery:
+        type: object
+        properties:
+          price:
+            $ref: '#/components/schemas/Price'
+          pickupLocation:
+            $ref: '#/components/schemas/Location'
+          sender:
+            $ref: '#/components/schemas/Sender'
+          driver:
+            $ref: '#/components/schemas/Driver'
+          city:
+            type: string
+          transport:
+            type: number
+          status:
+            type: string
+          orderDate:
+            type: string
+            format: date-time
+          numPackages:
+            type: number
+          destinations:
+            type: array
+            items:
+              $ref: '#/components/schemas/Destination'
+          colorStatus:
+              $ref: '#/components/schemas/ColorStatus'
+
+      DriverStatusChange:
+        type: object
+        properties:
+          driver:
+            type: string
+            required: true
+          change:
+            type: string
+            enum: ['TO_ONLINE', 'TO_OFFLINE']
+            required: true
+          timestamp:
+            type: string
+            format: date-time
+
+      SauronRowTimeline:
+        type: object
+        properties:
+          hasFreeSlot:
+            type: boolean
+            required: true
+          rowId:
+            type: string
+            required: true
+          name:
+            type: string
+          transport:
+            type: number
+            required: true
+          issue:
+            type: boolean
+            required: true
+          driverId:
+            type: string
+          slots:
+            type: array
+            items:
+              $ref: '#/components/schemas/SauronSlotTimeline'
+        example:
+          hasFreeSlot: true
+          rowId: "ldjquenvlep18nspp3u3j"
+          name: "Abdelaziz El Driver"
+          transport: 0
+          issue: true
+          driverId: "5901e91da570b70e00a27ac7"
+          slots:
+            - capacity: 1
+              amount: 5
+              startDate: "2016-09-22T07:22:13.989+0000"
+              endDate: "2016-09-22T09:22:13.989+0000"
+              transport: 1
+              idSlot: "5901e91da570b70e00a27ac9"
+              isPayable: 1
+              nominal: true
+              overcame: true
+              accepted: true
+              acceptedDrivers: ["5901e91da570b70e00a27ac7"]
+              statusUpdates:
+                - driver: "5901e91da570b70e00a27ac7"
+                  change: "TO_ONLINE"
+                  timestamp: "2016-09-22T07:40:13.989+0000"
+                - driver: "5901e91da570b70e00a27ac7"
+                  change: "TO_OFFLINE"
+                  timestamp: "2016-09-22T07:50:13.989+0000"
+
+
+      SauronSlotTimeline:
+        type: object
+        properties:
+          capacity:
+            type: number
+            required: true
+          amount:
+            type: number
+            required: true
+          startDate:
+            type: string
+            format: date-time
+            required: true
+          endDate:
+            type: string
+            format: date-time
+            required: true
+          transport:
+            type: number
+            required: true
+          idSlot:
+            type: string
+            required: true
+          isPayable:
+            type: number
+            required: true
+          nominal:
+            type: boolean
+            required: true
+          overcame:
+            type: boolean
+            required: true
+          accepted:
+            type: boolean
+            required: true
+          acceptedDrivers:
+            type: array
+            items:
+              type:
+                string
+            required: true
+          statusUpdates:
+            type: array
+            items:
+              $ref: '#/components/schemas/DriverStatusChange'
+
+      Relation:
+        type: object
+        properties:
+          affected:
+            type: string
+          parent:
+            type: string
+          offset:
+            type: integer
+        example:
+          affected: "endHourSel"
+          parent: "startHourSel"
+          offset: "3600"
+      Meeting:
+        type: object
+        properties:
+          transport:
+            type: integer
+          date:
+            type: string
+          city:
+            type: string
+          capacity:
+            type: integer
+
+      Query:
+        type: object
+        properties:
+          entityName:
+            type: string
+          attribute:
+            type: string
+          conditions:
+            type: array
+            items:
+              schema:
+                type: object
+                attributes:
+                  operation:
+                    type: string
+                    description: Possible values are ["gte", "gt", "lte", "lt", "eq", "neq", "gte_from", "gt_from", "lte_from", "lt_from", "eq_from", "neq_from"]
+                    enum: ["gte", "gt", "lte", "lt", "eq", "neq", "gte_from", "gt_from", "lte_from", "lt_from", "eq_from", "neq_from"]
+                  value:
+                    type: string
+        example:
+          entityName: "SauronSlotTimeline"
+          attribute: "startDate"
+          conditions:
+            - operation: "lte_from"
+              value: "endHourSel"
+            - operation: "gte_from"
+              value: "startHourSel"
+      FilterInput:
+        type: object
+        properties:
+          type:
+            type: integer
+          id:
+            type: string
+          canDeactivate:
+            type: boolean
+        example:
+          type: 3
+          id: "endHourSel"
+          canDeactivate: true
+      Mode:
+        type: object
+        properties:
+          name:
+            required: true
+            type: string
+          id:
+            required: true
+            type: string
+          queries:
+            required: true
+            type: array
+            items:
+              $ref: '#/components/schemas/Query'
+          relations:
+            type: array
+            items:
+              $ref: '#/components/schemas/Relation'
+        example:
+          name: "INTERSECT"
+          id: "INTERSECT"
+      Filter:
+        type: object
+        properties:
+          filterInputs:
+            required: true
+            type: array
+            items:
+              $ref: '#/components/schemas/FilterInput'
+          modes:
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          queries:
+            type: array
+            items:
+              $ref: '#/components/schemas/Query'
+      FilterGroup:
+        type: object
+        properties:
+          title:
+            required: true
+            type: string
+          id:
+            required: true
+            type: string
+          filters:
+            required: true
+            type: array
+            items:
+              $ref: '#/components/schemas/Filter'
+        example:
+          title: "Time Filters"
+          id: "TF001"
+          filters:
+            - filterInputs:
+              - type: 3
+                id: "endHourSel"
+                canDeactivate: true
+              - type: 3
+                id: "startHourSel"
+                canDeactivate: true
+              modes:
+              - name: "INTERSECT"
+                id: "INTERSECT"
+                queries:
+                  - attribute: "startDate"
+                    entityName: "SauronSlotTimeline"
+                    conditions:
+                      - operation: lte_from
+                        value: endHourSel
+                      - operation: gte_from
+                        value: startHourSel
+                relations:
+                  - affected: "endHourSel"
+                    parent: "startHourSel"
+                    offset: 3600
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+    GeneralSauronAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+security:
+- ApiKeyAuth: []
